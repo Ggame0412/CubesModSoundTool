@@ -96,12 +96,12 @@ public class SoundTools {
     }
 
     private FileHandle findAssetDir(String relative) {
-        FileHandle modAssets = Assets.assetsFolder.child(MOD_FILE_NAME);
-        FileHandle target = modAssets.child("assets").child(relative);
-        
-        if (target.exists() && target.isDirectory()) {
-            return target;
-        }
+        FileHandle target = Assets.assetsFolder.child(MOD_FILE_NAME).child(relative);
+        if (target.exists() && target.isDirectory()) return target;
+        Log.warning("[SoundTools] Asset folder not found: " + target.path());
+        return null;
+    }
+
         
         Log.warning("[SoundTools] Asset folder not found: " + target.path());
         return null;
