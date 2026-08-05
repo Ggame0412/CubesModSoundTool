@@ -62,7 +62,9 @@ public class SoundTools {
 
     @ModEventHandler
     public void init(InitializationEvent event) {
-        // Регистрируем себя в sided event bus, чтобы ловить игровые события
+        // Рендер-поток не является "sided" потоком, но setSide() разрешён
+        // для сетевых потоков и т.д. (см. документацию Side.java)
+        Side.setSide(Side.Client);
         Side.getSidedEventBus().register(this);
 
         for (String material : MATERIALS) {
@@ -99,7 +101,7 @@ public class SoundTools {
     }
 
     private FileHandle findAssetDir(String relative) {
-        // Ассеты мода копируются в Assets.assetsFolder.child(<имя .cm файла>)
+        // ModManager копирует ассеты мода в Assets.assetsFolder.child(<имя .cm файла>)
         FileHandle modAssets = Assets.assetsFolder.child(MOD_FILE_NAME);
         FileHandle target = modAssets.child("assets").child(relative);
         
@@ -130,8 +132,6 @@ public class SoundTools {
             }
         });
     }
-
-    // ====================== Игровые события через @EventHandler ======================
 
     @EventHandler
     public void onBreak(PlayerBreakBlockEvent event) {
