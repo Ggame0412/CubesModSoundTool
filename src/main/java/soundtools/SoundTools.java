@@ -37,7 +37,7 @@ public class SoundTools {
     private static final float STEP_DISTANCE = 1.0f;
     private static final Random random = new Random();
 
-    private static final Map<String, String> BLOCK_MATERIAL = new HashMap<>();
+    private static final Map<String, String> BLOCK_MATERIAL = new HashMap<String, String>();
     private static final String DEFAULT_MATERIAL = "grass";
 
     static {
@@ -57,8 +57,8 @@ public class SoundTools {
         Sound[] stepSounds = new Sound[0];
     }
 
-    private static final Map<String, MaterialSounds> SOUNDS = new HashMap<>();
-    private static final Map<Player, Float> stepAccumulator = new ConcurrentHashMap<>();
+    private static final Map<String, MaterialSounds> SOUNDS = new HashMap<String, MaterialSounds>();
+    private static final Map<Player, Float> stepAccumulator = new ConcurrentHashMap<Player, Float>();
 
     @ModEventHandler
     public void init(InitializationEvent event) {
@@ -72,7 +72,7 @@ public class SoundTools {
     }
 
     private Sound[] loadSoundSet(String material, String kind) {
-        List<Sound> list = new ArrayList<>();
+        List<Sound> list = new ArrayList<Sound>();
         FileHandle dir = findAssetDir("sounds/" + material);
         if (dir == null) return new Sound[0];
 
@@ -97,12 +97,9 @@ public class SoundTools {
 
     private FileHandle findAssetDir(String relative) {
         FileHandle target = Assets.assetsFolder.child(MOD_FILE_NAME).child(relative);
-        if (target.exists() && target.isDirectory()) return target;
-        Log.warning("[SoundTools] Asset folder not found: " + target.path());
-        return null;
-    }
-
-        
+        if (target.exists() && target.isDirectory()) {
+            return target;
+        }
         Log.warning("[SoundTools] Asset folder not found: " + target.path());
         return null;
     }
