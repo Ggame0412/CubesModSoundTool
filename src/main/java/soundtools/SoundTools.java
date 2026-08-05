@@ -60,13 +60,12 @@ public class SoundTools {
   static {
     BLOCK_MATERIAL.put("core:stone", "iron");     // временно "iron" пока нет отдельного "stone" - поменяйте при добавлении звуков камня
     BLOCK_MATERIAL.put("core:bedrock", "iron");
-    BLOCK_MATERIAL.put("core:dirt", "grass");
-    BLOCK_MATERIAL.put("core:grass", "grass");
-    BLOCK_MATERIAL.put("core:sapling", "grass");
-    BLOCK_MATERIAL.put("core:leaves", "grass");
-    BLOCK_MATERIAL.put("core:log", "wood");
-    BLOCK_MATERIAL.put("core:chest", "wood");
-    BLOCK_MATERIAL.put("core:planks", "wood");
+    BLOCK_MATERIAL.put("core:dirt", "iron");
+    BLOCK_MATERIAL.put("core:grass", "iron");
+    BLOCK_MATERIAL.put("core:leaves", "iron");
+    BLOCK_MATERIAL.put("core:log", "iron");
+    BLOCK_MATERIAL.put("core:chest", "iron");
+    BLOCK_MATERIAL.put("core:planks", "iron");
     BLOCK_MATERIAL.put("core:glass", "iron");     // временная заглушка
   }
 
