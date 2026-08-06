@@ -3,7 +3,6 @@ package soundtools;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 
 import ethanjones.cubes.block.Block;
@@ -18,6 +17,7 @@ import ethanjones.cubes.core.mod.event.InitializationEvent;
 import ethanjones.cubes.entity.living.player.Player;
 import ethanjones.cubes.graphics.assets.Assets;
 import ethanjones.cubes.side.common.Side;
+import ethanjones.cubes.world.CoordinateConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ public class SoundTools {
     private static final Random random = new Random();
 
     private static final Map<String, String> BLOCK_MATERIAL = new HashMap<String, String>();
-    private static final String DEFAULT_MATERIAL = "grass";
+    private static final String DEFAULT_MATERIAL = "iron"; // временно: пока только iron со звуками, см. лог init
 
     static {
         BLOCK_MATERIAL.put("core:stone", "iron");
@@ -165,17 +165,16 @@ public class SoundTools {
         if (accumulated >= STEP_DISTANCE) {
             accumulated -= STEP_DISTANCE;
 
-            int blockX = MathUtils.floor(newPos.x);
-            int blockY = MathUtils.floor(newPos.y) - 1;
-            int blockZ = MathUtils.floor(newPos.z);
+            // Как в Player.updatePosition(): position.y - это верх игрока (голова),
+            // а не ступни. Блок под ногами = position.y - PLAYER_HEIGHT, без доп. "-1".
+            int blockX = CoordinateConverter.block(newPos.x);
+            int blockY = CoordinateConverter.block(newPos.y - Player.PLAYER_HEIGHT);
+            int blockZ = CoordinateConverter.block(newPos.z);
 
             Block underfoot = Side.getCubes().world.getBlock(blockX, blockY, blockZ);
             String material = getMaterial(underfoot);
             MaterialSounds ms = SOUNDS.get(material);
 
-            // ДИАГНОСТИКА 2: если underfoot=null - неверный Y-оффсет (position.y может быть
-            // высотой глаз, а не ступней). Если stepSounds=0 - звуки не подгрузились для
-            // выбранного материала (маловероятно, раз onPlace уже играет тот же массив).
             Log.info("[SoundTools] step-trigger block=(" + blockX + "," + blockY + "," + blockZ + ")"
                     + " underfoot=" + (underfoot == null ? "null" : underfoot.id)
                     + " material=" + material
