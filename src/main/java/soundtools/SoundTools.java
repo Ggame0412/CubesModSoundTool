@@ -18,6 +18,8 @@ import ethanjones.cubes.entity.living.player.Player;
 import ethanjones.cubes.graphics.assets.Assets;
 import ethanjones.cubes.side.common.Side;
 import ethanjones.cubes.world.CoordinateConverter;
+import ethanjones.cubes.world.World;
+import ethanjones.cubes.world.gravity.WorldGravity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +36,7 @@ public class SoundTools {
     private static final float PITCH_VARIANCE = 0.15f;
     private static final float VOLUME_MIN = 0.85f;
     private static final float VOLUME_MAX = 1.0f;
-    private static final float STEP_DISTANCE = 0.5f;
+    private static final float STEP_DISTANCE = 1.0f;
     private static final Random random = new Random();
 
     private static final Map<String, String> BLOCK_MATERIAL = new HashMap<String, String>();
@@ -151,6 +153,15 @@ public class SoundTools {
         float horizontalDist = (float) Math.sqrt(dx * dx + dz * dz);
 
         if (horizontalDist < 0.001f) return;
+
+        World world = Side.getCubes().world;
+        boolean grounded = WorldGravity.onBlock(world, newPos, Player.PLAYER_HEIGHT, Player.PLAYER_RADIUS);
+        if (!grounded) {
+            // В воздухе (прыжок/падение) - это не шаг. Сбрасываем накопитель, чтобы после
+            // приземления не сыграл "запоздалый" звук от пройденного в воздухе расстояния.
+            stepAccumulator.put(player, 0f);
+            return;
+        }
 
         Float previous = stepAccumulator.get(player);
         float accumulated = (previous == null ? 0f : previous) + horizontalDist;
