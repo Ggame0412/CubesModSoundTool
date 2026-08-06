@@ -150,11 +150,17 @@ public class SoundTools {
         float dz = newPos.z - oldPos.z;
         float horizontalDist = (float) Math.sqrt(dx * dx + dz * dz);
 
-        Log.info("[SoundTools] move dist=" + horizontalDist + " old=" + oldPos + " new=" + newPos);
         if (horizontalDist < 0.001f) return;
 
         Float previous = stepAccumulator.get(player);
         float accumulated = (previous == null ? 0f : previous) + horizontalDist;
+
+        // ДИАГНОСТИКА 1: если playerId меняется каждый вызов - значит player не годится
+        // как ключ карты (например, событие создаёт новый враппер), и накопление
+        // расстояния всегда обнуляется, потому что previous всегда null.
+        Log.info("[SoundTools] step-debug playerId=" + System.identityHashCode(player)
+                + " prev=" + previous + " dist=" + horizontalDist + " acc=" + accumulated
+                + " threshold=" + STEP_DISTANCE);
 
         if (accumulated >= STEP_DISTANCE) {
             accumulated -= STEP_DISTANCE;
@@ -164,11 +170,18 @@ public class SoundTools {
             int blockZ = MathUtils.floor(newPos.z);
 
             Block underfoot = Side.getCubes().world.getBlock(blockX, blockY, blockZ);
-            if (underfoot != null) {
-                String material = getMaterial(underfoot);
-                MaterialSounds ms = SOUNDS.get(material);
-                if (ms != null) playRandom(ms.stepSounds, 0.6f);
-            }
+            String material = getMaterial(underfoot);
+            MaterialSounds ms = SOUNDS.get(material);
+
+            // ДИАГНОСТИКА 2: если underfoot=null - неверный Y-оффсет (position.y может быть
+            // высотой глаз, а не ступней). Если stepSounds=0 - звуки не подгрузились для
+            // выбранного материала (маловероятно, раз onPlace уже играет тот же массив).
+            Log.info("[SoundTools] step-trigger block=(" + blockX + "," + blockY + "," + blockZ + ")"
+                    + " underfoot=" + (underfoot == null ? "null" : underfoot.id)
+                    + " material=" + material
+                    + " stepSounds=" + (ms == null ? "no MaterialSounds" : ms.stepSounds.length));
+
+            if (ms != null) playRandom(ms.stepSounds, 0.6f);
         }
 
         stepAccumulator.put(player, accumulated);
