@@ -34,7 +34,7 @@ public class SoundTools {
     private static final float PITCH_VARIANCE = 0.15f;
     private static final float VOLUME_MIN = 0.85f;
     private static final float VOLUME_MAX = 1.0f;
-    private static final float STEP_DISTANCE = 1.0f;
+    private static final float STEP_DISTANCE = 0.5f;
     private static final Random random = new Random();
 
     private static final Map<String, String> BLOCK_MATERIAL = new HashMap<String, String>();
@@ -149,6 +149,8 @@ public class SoundTools {
         float dx = newPos.x - oldPos.x;
         float dz = newPos.z - oldPos.z;
         float horizontalDist = (float) Math.sqrt(dx * dx + dz * dz);
+
+        Log.info("[SoundTools] move dist=" + horizontalDist + " old=" + oldPos + " new=" + newPos);
         if (horizontalDist < 0.001f) return;
 
         Float previous = stepAccumulator.get(player);
