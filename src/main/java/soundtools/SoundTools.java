@@ -62,6 +62,7 @@ public class SoundTools {
 
     private static final Map<String, MaterialSounds> SOUNDS = new HashMap<String, MaterialSounds>();
     private static final Map<Player, Float> stepAccumulator = new ConcurrentHashMap<Player, Float>();
+    private static final Map<Player, Boolean> groundedState = new ConcurrentHashMap<Player, Boolean>();
 
     @ModEventHandler
     public void init(InitializationEvent event) {
@@ -117,7 +118,27 @@ public class SoundTools {
         if (sounds == null || sounds.length == 0) return;
         final Sound sound = sounds[random.nextInt(sounds.length)];
         final float pitch = 1f + (random.nextFloat() * 2f - 1f) * PITCH_VARIANCE;
-        final float volume = (VOLUME_MIN + random.nextFloat() * (VOLUME_MAX - VOLUME_MIN)) * baseVolume;
+        final float volume = Math.min(1f, (VOLUME_MIN + random.nextFloat() * (VOLUME_MAX - VOLUME_MIN)) * baseVolume);
+
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                sound.play(volume, pitch, 0f);
+            }
+        });
+    }
+
+    /**
+     * Звук приземления: громче и "тяжелее" обычного шага. libGDX ограничивает volume
+     * диапазоном 0-1 (значения выше просто обрежутся), поэтому "погромче" делаем через
+     * пониженный питч (более низкий/увесистый звук удара) + максимальную громкость,
+     * а не попытку превысить 1.0.
+     */
+    private static void playLanding(final Sound[] sounds) {
+        if (sounds == null || sounds.length == 0) return;
+        final Sound sound = sounds[random.nextInt(sounds.length)];
+        final float pitch = 0.7f + random.nextFloat() * 0.15f; // ниже обычного шага - ощущение тяжести
+        final float volume = 1.0f;
 
         Gdx.app.postRunnable(new Runnable() {
             @Override
@@ -146,17 +167,40 @@ public class SoundTools {
         if (!Side.isClient()) return;
 
         Player player = event.getPlayer();
-        Vector3 oldPos = event.oldPosition;
         Vector3 newPos = event.newPosition;
+        World world = Side.getCubes().world;
 
+        boolean grounded = WorldGravity.onBlock(world, newPos, Player.PLAYER_HEIGHT, Player.PLAYER_RADIUS);
+
+        // Детект приземления: было в воздухе -> стало на земле. Делаем это ДО проверки
+        // горизонтального движения ниже, иначе прыжок строго вверх/вниз без сдвига по X/Z
+        // никогда бы не поймался (там ниже есть ранний return по dist < 0.001).
+        Boolean wasGrounded = groundedState.put(player, grounded);
+        boolean justLanded = grounded && wasGrounded != null && !wasGrounded;
+
+        if (justLanded) {
+            int blockX = CoordinateConverter.block(newPos.x);
+            int blockY = CoordinateConverter.block(newPos.y - Player.PLAYER_HEIGHT);
+            int blockZ = CoordinateConverter.block(newPos.z);
+
+            Block underfoot = world.getBlock(blockX, blockY, blockZ);
+            String material = getMaterial(underfoot);
+            MaterialSounds ms = SOUNDS.get(material);
+
+            Log.info("[SoundTools] landed block=(" + blockX + "," + blockY + "," + blockZ + ")"
+                    + " underfoot=" + (underfoot == null ? "null" : underfoot.id)
+                    + " material=" + material);
+
+            if (ms != null) playLanding(ms.stepSounds);
+        }
+
+        Vector3 oldPos = event.oldPosition;
         float dx = newPos.x - oldPos.x;
         float dz = newPos.z - oldPos.z;
         float horizontalDist = (float) Math.sqrt(dx * dx + dz * dz);
 
         if (horizontalDist < 0.001f) return;
 
-        World world = Side.getCubes().world;
-        boolean grounded = WorldGravity.onBlock(world, newPos, Player.PLAYER_HEIGHT, Player.PLAYER_RADIUS);
         if (!grounded) {
             // В воздухе (прыжок/падение) - это не шаг. Сбрасываем накопитель, чтобы после
             // приземления не сыграл "запоздалый" звук от пройденного в воздухе расстояния.
@@ -167,13 +211,6 @@ public class SoundTools {
         Float previous = stepAccumulator.get(player);
         float accumulated = (previous == null ? 0f : previous) + horizontalDist;
 
-        // ДИАГНОСТИКА 1: если playerId меняется каждый вызов - значит player не годится
-        // как ключ карты (например, событие создаёт новый враппер), и накопление
-        // расстояния всегда обнуляется, потому что previous всегда null.
-        Log.info("[SoundTools] step-debug playerId=" + System.identityHashCode(player)
-                + " prev=" + previous + " dist=" + horizontalDist + " acc=" + accumulated
-                + " threshold=" + STEP_DISTANCE);
-
         if (accumulated >= STEP_DISTANCE) {
             accumulated -= STEP_DISTANCE;
 
@@ -183,14 +220,9 @@ public class SoundTools {
             int blockY = CoordinateConverter.block(newPos.y - Player.PLAYER_HEIGHT);
             int blockZ = CoordinateConverter.block(newPos.z);
 
-            Block underfoot = Side.getCubes().world.getBlock(blockX, blockY, blockZ);
+            Block underfoot = world.getBlock(blockX, blockY, blockZ);
             String material = getMaterial(underfoot);
             MaterialSounds ms = SOUNDS.get(material);
-
-            Log.info("[SoundTools] step-trigger block=(" + blockX + "," + blockY + "," + blockZ + ")"
-                    + " underfoot=" + (underfoot == null ? "null" : underfoot.id)
-                    + " material=" + material
-                    + " stepSounds=" + (ms == null ? "no MaterialSounds" : ms.stepSounds.length));
 
             if (ms != null) playRandom(ms.stepSounds, 0.6f);
         }
